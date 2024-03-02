@@ -1,6 +1,8 @@
-from tkinter import Tk, Frame, Label, Entry, Button, messagebox
+from tkinter import Tk, Frame, Label, Entry, Button, messagebox,StringVar,END,Canvas
 from tkinter import font as tkFont
 from PIL import Image, ImageTk
+from tkcalendar import DateEntry
+from tkinter import ttk
 from datetime import datetime, timedelta
 import sqlite3
 import bcrypt
@@ -100,7 +102,7 @@ class Signup_Page:
                 hashed_password = bcrypt.hashpw(encoded_password,bcrypt.gensalt())
                 cursor.execute('INSERT INTO USERDB VALUES (?,?)',[username,hashed_password])
                 conn.commit()
-                #create_user_database(username)
+                
                 messagebox.showinfo("Success","Account has been created.")
         else:
             messagebox.showerror("Error","Enter all data.")
@@ -184,22 +186,98 @@ class Main_Page:
         self.u1_lbl.place(x=50, y=80)
 
         self.username_lbl = Label(self.f4, text=f"{self.username}", font=fonts)
-        self.username_lbl.place(x=150, y=460)
+        self.username_lbl.place(x=150, y=440)
         self.logout_button = Button(self.f4, text="Logout",width=15, font=font3, bg="red", fg="yellow", cursor="hand2", command=self.logout)
         self.logout_button.place(x=890, y=550)
 
-        self.create = Button(self.f4,text="CREATE TASK",font=font2)#,command = self.creation)
+        self.create = Button(self.f4,text="CREATE TASK",font=font2,command = self.creation)
         self.create.place(x=550,y=150)
-        self.edit = Button(self.f4,text="EDIT",font=font2)
+        self.edit = Button(self.f4,text="EDIT TASK",font=font2)
         self.edit.place(x=550,y=250)
     
-    #def creation(self):
-       #self.
-
-
+    def creation(self):
+        self.f4.destroy()
+        cr = Create_Tasks(self.root,self.username)
     def logout(self):
         self.f4.destroy()
         confirmation = Confirmation_Page(self.root)
+class Create_Tasks:
+    def __init__(self,root,username):
+        self.root=root
+        self.username = username
+        self.f5 = Frame(self.root,width=1300,height=650)
+        self.f5.place(x=0,y=0)
+        self.mbg31 = Image.open("assets/backgrd3.png")
+        self.mbg31 = self.mbg31.resize((1300,650))
+        self.mbg31 = ImageTk.PhotoImage(self.mbg31)
+        self.mbg3_lbl21 = Label(self.f5, image = self.mbg31)
+        self.mbg3_lbl21.image = self.mbg31
+        self.mbg3_lbl21.place(x = 0, y= 0)
+        #global tk1_lbl
+        #global dd_en
+        #global opt_menu
+        #global priority_option_menu
+
+        self.tk1 = Label(self.f5,text="Task",font=("Arial","15","bold"))
+        self.tk1.place(x=50,y=30)
+        self.tk1_lbl = Entry(self.f5,font=("Arial","15","bold"),width=40)
+        self.tk1_lbl.place(x=150,y=30)
+        self.dd = Label(self.f5,text="Due Date",font=("Arial","13","bold"))
+        self.dd.place(x=50,y=80)
+        self.dd_en = DateEntry(self.f5,width=30,bg="darkblue",fg="white",borderwidth=2,year=2024,month=2,day=1,font=("Arial","15","bold"))
+        self.dd_en.place(x=150,y=80)
+        
+        self.time_var = StringVar(self.f5)
+        self.time_var.set("12:00 AM")
+        self.dtime = Label(self.f5,text="Due Time",font=("Arial","13","bold"))
+        self.dtime.place(x=50,y=150)
+        self.time_values = [f"{i:02d}:{j:02d}{am_pm}" for i in range(1,13) for j in range(0,60,15) for am_pm in ["AM","PM"]]
+        self.opt_menu = ttk.Combobox(self.f5,textvariable=self.time_var,values=self.time_values,font=font3)
+        self.opt_menu.place(x=150,y=150)
+
+        self.prilbl = Label(self.f5,text="Priority",font=("Arial","13","bold"))
+        self.prilbl.place(x=50,y=200)
+        self.priority_var = StringVar(self.f5)
+        self.priority_var.set("High")  
+        self.priority_option_menu = ttk.Combobox(self.f5, textvariable=self.priority_var, values=["High", "Medium", "Low"])
+        self.priority_option_menu.place(x=150,y=200)
+
+        self.setbut = Button(self.f5,text="Set",bg='pink',font=font3,command=self.Set_tasks)
+        self.setbut.place(x=150,y=300)
+    def Set_tasks(self):
+        task_name = self.tk1_lbl.get()
+        task_ddate = self.dd_en.get()
+        topt_time = self.opt_menu.get()
+        t_priority = self.priority_option_menu.get()
+    
+        if task_name !='' and task_ddate != '' and topt_time != '' and t_priority != '' :
+            # Connect to the user's database
+            user_db_name = f"{self.username}_tasks.db"
+            user_conn = sqlite3.connect(user_db_name)
+            user_cursor = user_conn.cursor()
+            # Create tasks table if it doesn't exist
+            user_cursor.execute('''
+                                CREATE TABLE IF NOT EXISTS tasks(
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                task_name TEXT NOT NULL,
+                                task_ddate TEXT NOT NULL,
+                                topt_time TEXT NOT NULL,
+                                t_priority TEXT NOT NULL)
+                                ''')
+            # Insert task into tasks table
+            user_cursor.execute('INSERT INTO tasks (task_name,task_ddate,topt_time, t_priority ) VALUES (?,?,?,?)', (task_name,task_ddate,topt_time, t_priority))
+            user_conn.commit()
+            user_conn.close()
+            messagebox.showinfo("Success", "Task created successfully.")
+            self.tk1_lbl.delete(0, END)
+            self.dd_en.delete(0, END)
+            self.opt_menu.set("12:00 AM")
+            self.priority_option_menu.set("High")
+        
+        else:
+            messagebox.showerror("Error", "Please fill in all the data fields.")
+
+
        
 
 

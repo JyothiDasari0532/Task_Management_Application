@@ -47,7 +47,7 @@ class Confirmation_Page:
         self.img1_lbl1 = Label(self.f1, image = self.img1)
         self.img1_lbl1.place(x = 350, y= 15)
         
-        self.config_button = Button(self.f1,text="Get Started",command=self.next_page,width=20,height=3,bg="#346340",fg="#FFFFFF",font=helv36)
+        self.config_button = Button(self.f1,text="Get Started",command=self.next_page,width=20,height=3,bg="#346340",fg="#FFFFFF",font=helv36,cursor="hand2")
         self.config_button.place(x = 470,y=527)
         
     def next_page(self):
@@ -195,17 +195,29 @@ class Main_Page:
         self.logout_button = Button(self.f4, text="Logout",width=15, font=font3, bg="red", fg="yellow", cursor="hand2", command=self.logout)
         self.logout_button.place(x=890, y=550)
 
-        self.create = Button(self.f4,text="CREATE TASK",bg="#eb34e1",font=font2,command = self.creation)
-        self.create.place(x=550,y=150)
-        self.edit = Button(self.f4,text="VIEW TASKS",bg="#eb34e1",font=font2,command=self.view_tasks)
-        self.edit.place(x=550,y=250)
-    
+        self.create = Button(self.f4,text="CREATE TASK",bg="#eb34e1",font=font2,command = self.creation,cursor="hand2")
+        self.create.place(x=550,y=100)
+        self.edit = Button(self.f4,text="VIEW TASKS",bg="#eb34e1",font=font2,command=self.view_tasks,cursor="hand2")
+        self.edit.place(x=550,y=200)
+        self.com = Button(self.f4,text="COMPLETED TASKS",bg="#eb34e1",font=font2,command=self.goto_comp,cursor="hand2")
+        self.com.place(x=550,y=300)
+        self.overdue = Button(self.f4,text="OVERDUE TASKS",bg="#eb34e1",font=font2,cursor="hand2",command=self.go_over)
+        self.overdue.place(x=550,y=400)
+
+
+    def goto_comp(self):
+        self.f4.destroy()
+        comt = Completed_tasks(self.root,self.username)
     def creation(self):
         self.f4.destroy()
         cr = Create_Tasks(self.root,self.username)
     def view_tasks(self):
         self.f4.destroy()
         vt = ViewTasks(self.root, self.username)
+    def go_over(self):
+        self.f4.destroy()
+        od = OverdueTasks(self.root,self.username)
+
     def logout(self):
         self.f4.destroy()
         confirmation = Confirmation_Page(self.root)
@@ -222,19 +234,14 @@ class ViewTasks:
         self.mbg4_lbl2 = Label(self.f6, image = self.mbg4)
         self.mbg4_lbl2.image = self.mbg4
         self.mbg4_lbl2.place(x=0,y=0)
-        self.back2 = Button(self.f6,text="BACK",bg="pink",fg="black",font = font3,width = 15,command= self.goto_uspage)
+        self.back2 = Button(self.f6,text="BACK",bg="pink",fg="black",font = font3,width = 15,command= self.goto_uspage,cursor="hand2")
         self.back2.place(x=650,y=550)
-
-        # Connect to the user's database
         user_db_name = f"{self.username}_tasks.db"
         user_conn = sqlite3.connect(user_db_name)
         user_cursor = user_conn.cursor()
 
-        # Fetch tasks from the database
         user_cursor.execute("SELECT * FROM tasks")
         tasks = user_cursor.fetchall()
-
-        # Display tasks in a list with edit buttons
         y = 20
         for task in tasks:
             task_name, task_ddate, topt_time, t_priority = task[1:]
@@ -242,11 +249,11 @@ class ViewTasks:
             #task_label.grid(row=row, column=0, padx=10, pady=5, sticky="w")
             task_label.place(x=20,y=y)
     
-            
-
-            edit_button = Button(self.f6, text="Edit", command=lambda t=task: self.edit_task(t))
+            edit_button = Button(self.f6, text="Edit", command=lambda t=task: self.edit_task(t),cursor="hand2")
             #edit_button.grid(row=row, column=1, padx=10, pady=5)
             edit_button.place(x=430,y=y)
+            done_button = Button(self.f6,text="Done",command=lambda t = task:self.done_task(t),cursor="hand2")
+            done_button.place(x=480,y=y)
             y+=40
         for task in tasks:
             self.check_task_due_time(task)
@@ -256,8 +263,36 @@ class ViewTasks:
     def goto_uspage(self):
         self.f6.destroy()
         Mp =Main_Page(self.root,self.username)
+    def done_task(self, task):
+        task_name, task_ddate, topt_time, t_priority = task[1:]
+        # Move the task to the Completed Tasks page
+        user_db_name = f"{self.username}_tasks.db"
+        user_conn = sqlite3.connect(user_db_name)
+        user_cursor = user_conn.cursor()
 
+        # Create completed_tasks table if it doesn't exist
+        user_cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS completed_tasks(
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            task_name TEXT NOT NULL,
+                            task_ddate TEXT NOT NULL,
+                            topt_time TEXT NOT NULL,
+                            t_priority TEXT NOT NULL)
+                            ''')
 
+        user_cursor.execute('INSERT INTO completed_tasks (task_name, task_ddate, topt_time, t_priority) VALUES (?, ?, ?, ?)',
+                            (task_name, task_ddate, topt_time, t_priority))
+        user_conn.commit()
+        user_cursor.execute('DELETE FROM tasks WHERE task_name=? AND task_ddate = ? AND topt_time = ? AND t_priority = ?',(task_name, task_ddate, topt_time, t_priority))
+        user_conn.commit()
+       
+         # Display a message
+        messagebox.showinfo("Task Completed", f"Hurray! You completed task: {task_name}")
+
+        #task_frame.destroy()
+        self.f6.destroy()
+        vt = ViewTasks(self.root,self.username)
+        user_conn.close()
     
     def check_task_due_time(self, task):
         task_name, task_ddate, topt_time, t_priority = task[1:]
@@ -300,10 +335,104 @@ class ViewTasks:
          self.f6.destroy()
          create_task_page = Create_Tasks(self.root, self.username, task_name, task_ddate, topt_time, t_priority)
     
+class Completed_tasks:
+    def __init__(self, root, username):
+        self.root = root
+        self.username = username
+        self.f7 = Frame(self.root, width=1300, height=650)
+        self.f7.place(x=0, y=0)
+        self.mbgct = Image.open("assets/comp_tasks.png")
+        self.mbgct = self.mbgct.resize((1300, 650))
+        self.mbgct = ImageTk.PhotoImage(self.mbgct)
+        self.mbgct_lbl21 = Label(self.f7, image=self.mbgct)
+        self.mbgct_lbl21.image = self.mbgct
+        self.mbgct_lbl21.place(x=0, y=0)
+        self.back3 = Button(self.f7,text="BACK",bg="pink",font = font3,width = 13,command= self.goto_usp,cursor="hand2")
+        self.back3.place(x=700,y=570)
 
 
+        # Connect to the user's database
+        user_db_name = f"{self.username}_tasks.db"
+        user_conn = sqlite3.connect(user_db_name)
+        user_cursor = user_conn.cursor()
 
+        # Fetch completed tasks from the database
+        user_cursor.execute("SELECT * FROM completed_tasks")
+        completed_tasks = user_cursor.fetchall()
 
+        user_conn.close()
+
+        y = 20
+        for task in completed_tasks:
+            task_name, task_ddate, topt_time, t_priority = task[1:]
+            task_label = Label(self.f7, text=f"Task: {task_name}, Due Date: {task_ddate}, Time: {topt_time}, Priority: {t_priority}")
+            task_label.place(x=20, y=y)
+            y += 40
+    def goto_usp(self):
+        self.f7.destroy()
+        Mp =Main_Page(self.root,self.username)
+
+class OverdueTasks:
+    def __init__(self, root, username):
+        self.root = root
+        self.username = username
+        self.f8 = Frame(self.root, width=1300, height=650)
+        self.f8.place(x=0, y=0)
+        self.m4 = Image.open("assets/overdue.png")
+        self.m4 = self.m4.resize((1300, 650))
+        self.m4 = ImageTk.PhotoImage(self.m4)
+        self.m4_lbl21 = Label(self.f8, image=self.m4)
+        self.m4_lbl21.image = self.m4
+        self.m4_lbl21.place(x=0, y=0)
+        self.back4 = Button(self.f8, text="BACK", bg="pink", font=font3, width=13, command=self.goto_usp, cursor="hand2")
+        self.back4.place(x=700, y=570)
+        # Connect to the user's database
+        user_db_name = f"{self.username}_tasks.db"
+        user_conn = sqlite3.connect(user_db_name)
+        user_cursor = user_conn.cursor()
+
+        # Create overdue_tasks table if it doesn't exist
+        user_cursor.execute('''
+                            CREATE TABLE IF NOT EXISTS overdue_tasks(
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            task_name TEXT NOT NULL,
+                            task_ddate TEXT NOT NULL,
+                            topt_time TEXT NOT NULL,
+                            t_priority TEXT NOT NULL)
+                            ''')
+        user_cursor.execute("SELECT * FROM tasks")
+        all_tasks = user_cursor.fetchall()
+
+        # Get current datetime
+        current_datetime = datetime.now()
+
+        # Check for overdue tasks and insert them into the overdue_tasks table
+        for task in all_tasks:
+            task_name, task_ddate, topt_time, t_priority = task[1:]
+            task_datetime = datetime.strptime(f"{task_ddate} {topt_time}", "%m/%d/%y %I:%M%p")
+            if task_datetime < current_datetime:
+                user_cursor.execute('INSERT INTO overdue_tasks (task_name, task_ddate, topt_time, t_priority) VALUES (?, ?, ?, ?)',
+                                    (task_name, task_ddate, topt_time, t_priority))
+
+        user_conn.commit()
+
+        # Fetch overdue tasks from the overdue_tasks table
+        user_cursor.execute("SELECT distinct * FROM overdue_tasks")
+        overdue_tasks = user_cursor.fetchall()
+
+        # Display overdue tasks
+        y = 20
+        for task in overdue_tasks:
+            task_name, task_ddate, topt_time, t_priority = task[1:]
+            task_label = Label(self.f8, text=f"Task: {task_name}, Due Date: {task_ddate}, Time: {topt_time}, Priority: {t_priority}")
+            task_label.place(x=20, y=y)
+            y += 40
+
+        user_conn.close()
+
+    def goto_usp(self):
+        self.f8.destroy()
+        Mp = Main_Page(self.root, self.username)
 
 
 from tkinter import PhotoImage
@@ -364,10 +493,10 @@ class Create_Tasks:
                                                   values=["High", "Medium", "Low"])
         self.priority_option_menu.place(x=200, y=270)
 
-        self.setbut = Button(self.f5, text="Set", bg='pink', font=font3,width=15,command=self.Set_tasks)
+        self.setbut = Button(self.f5, text="Set", bg='pink', font=font3,width=15,command=self.Set_tasks,cursor="hand2")
         self.setbut.place(x=330, y=350)
 
-        self.back1 = Button(self.f5,text="BACK",bg="pink",font = font3,width = 13,command= self.goto_userpage)
+        self.back1 = Button(self.f5,text="BACK",bg="pink",font = font3,width = 13,command= self.goto_userpage,cursor="hand2")
         self.back1.place(x=150,y=350)
     
     def goto_userpage(self):
@@ -417,14 +546,6 @@ class Create_Tasks:
         else:
             count = 0
             self.animation(count)
-
-
-
-
-
-
-
-
 
 
 

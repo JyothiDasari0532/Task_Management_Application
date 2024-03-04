@@ -1,19 +1,16 @@
-from tkinter import Tk, Frame, Label, Entry, Button, messagebox,StringVar,END,Canvas
-from tkinter import font as tkFont
-import time,threading
-from PIL import Image
-from PIL import ImageTk
+from tkinter import Tk, Frame, Label, Entry, Button, messagebox,StringVar,END
+from PIL import Image, ImageTk
 from tkcalendar import DateEntry
 from tkinter import ttk
 from datetime import datetime, timedelta
 import sqlite3
 import bcrypt
-import plyer
 from plyer import notification
 
 
 root = Tk()
 root.geometry("1300x650")
+root.resizable(False,False)
 root.title("TASK ALARM")
 root.iconbitmap("assets/logo_icon.ico")
 font1 = ('Helvetica',25,'bold')
@@ -21,7 +18,7 @@ font2 = ('Arial',17,'bold')
 font3 = ('Arial',13,'bold')
 font4 = ('Arial',13,'bold','underline')
 fonts = ('Arial', 16, 'bold')
-helv36 = tkFont.Font(family="Helvetica",size=18,weight="bold")
+helv36 =("Helvetica",18,"bold")
 
 conn = sqlite3.connect('project_db.db')
 cursor = conn.cursor()
@@ -312,10 +309,10 @@ class ViewTasks:
             self.notify_user(task_name, due_datetime)
 
     def notify_user(self, task_name, due_datetime):
-        '''app_name = "Task Alarm"
+        app_name = "Task Alarm"
         title = "Task Reminder"
         message = f"Task '{task_name}' is due at {due_datetime}!"
-        notification.notify(app_name=app_name, title=title, message=message, timeout=10)'''
+        notification.notify(app_name=app_name, title=title, message=message, timeout=10)
         messagebox.showinfo("Task Reminder", f"Task '{task_name}' is due at {due_datetime}!")
 
 
